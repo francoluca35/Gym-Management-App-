@@ -1,4 +1,5 @@
 import { PaymentStatus } from "../types";
+import { supabase } from "../../lib/supabase";
 
 export function formatDate(dateString: string): string {
   const date = new Date(dateString);
