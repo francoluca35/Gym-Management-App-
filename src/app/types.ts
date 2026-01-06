@@ -36,6 +36,7 @@ export interface Member {
   membershipId: string;
   paymentMethod: PaymentMethod;
   lastPaymentDate: string;
+  imageUrl?: string;
 }
 
 export interface AttendanceRecord {
