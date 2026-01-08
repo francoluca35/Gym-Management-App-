@@ -55,9 +55,9 @@ CREATE TRIGGER update_gimnasios_updated_at BEFORE UPDATE ON gimnasios
 CREATE TRIGGER update_gyms_updated_at BEFORE UPDATE ON gyms
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- Tabla para clientes del gimnasio (client_gym)
+-- Tabla para clientes del gimnasio (clientGym)
 -- Estructura: cada cliente está asociado a un gym_id específico
-CREATE TABLE IF NOT EXISTS client_gym (
+CREATE TABLE IF NOT EXISTS clientGym (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   gym_id TEXT NOT NULL,
   name TEXT NOT NULL,
@@ -71,14 +71,14 @@ CREATE TABLE IF NOT EXISTS client_gym (
   image_url TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  CONSTRAINT fk_client_gym_gym_id FOREIGN KEY (gym_id) REFERENCES gimnasios(gym_id) ON DELETE CASCADE
+  CONSTRAINT fk_clientGym_gym_id FOREIGN KEY (gym_id) REFERENCES gimnasios(gym_id) ON DELETE CASCADE
 );
 
 -- Índices para mejorar el rendimiento
-CREATE INDEX IF NOT EXISTS idx_client_gym_gym_id ON client_gym(gym_id);
-CREATE INDEX IF NOT EXISTS idx_client_gym_email ON client_gym(email);
-CREATE INDEX IF NOT EXISTS idx_client_gym_membership_expiry ON client_gym(membership_expiry);
+CREATE INDEX IF NOT EXISTS idx_clientGym_gym_id ON clientGym(gym_id);
+CREATE INDEX IF NOT EXISTS idx_clientGym_email ON clientGym(email);
+CREATE INDEX IF NOT EXISTS idx_clientGym_membership_expiry ON clientGym(membership_expiry);
 
 -- Trigger para actualizar updated_at
-CREATE TRIGGER update_client_gym_updated_at BEFORE UPDATE ON client_gym
+CREATE TRIGGER update_clientGym_updated_at BEFORE UPDATE ON clientGym
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

@@ -17,7 +17,6 @@ import { mockMembers, mockAttendanceRecords, mockMemberships } from "./utils/moc
 import { generateId } from "./utils/helpers";
 import { checkSavedSession, logoutGym, checkGymByIP, getUserIP, GymData } from "./utils/auth";
 import { supabase } from "../lib/supabase";
-import { getClientsGym, addClientGym, updateClientGym, deleteClientGym, payMembership } from "./utils/clients";
 
 interface AuthenticatedUser {
   usuario: string;
@@ -92,33 +91,11 @@ function App() {
 
     verifySession();
     
-    // Cargar datos de ejemplo (solo para membresías y asistencia por ahora)
+    // Cargar datos de ejemplo
+    setMembers(mockMembers);
     setAttendanceRecords(mockAttendanceRecords);
     setMemberships(mockMemberships);
   }, []);
-
-  // Cargar clientes cuando se autentica y hay gymId
-  useEffect(() => {
-    const loadClients = async () => {
-      // Obtener gym_id del estado o localStorage como respaldo
-      const currentGymId = gymId || localStorage.getItem('gym_id');
-      
-      if (currentGymId && authState === 'authenticated') {
-        console.log('Cargando clientes para gym_id:', currentGymId);
-        const result = await getClientsGym(currentGymId);
-        if (result.success && result.clients) {
-          console.log(`Cargados ${result.clients.length} clientes para el gimnasio ${currentGymId}`);
-          setMembers(result.clients);
-        } else {
-          console.error('Error cargando clientes:', result.error);
-          // Si hay error, mantener array vacío
-          setMembers([]);
-        }
-      }
-    };
-
-    loadClients();
-  }, [gymId, authState]);
 
   const handleRegisterSuccess = async (gymIdParam: string, user: AuthenticatedUser) => {
     setGymId(gymIdParam);
@@ -233,55 +210,20 @@ function App() {
     setAuthState('shift-selection');
   };
 
-  const handleAddMember = async (memberData: Omit<Member, 'id'>) => {
-    // Obtener gym_id del estado o localStorage como respaldo
-    const currentGymId = gymId || localStorage.getItem('gym_id');
-    
-    if (!currentGymId) {
-      console.error('No hay gymId disponible');
-      alert('Error: No se pudo identificar el gimnasio. Por favor, inicia sesión nuevamente.');
-      return;
-    }
-
-    console.log('Agregando miembro para gym_id:', currentGymId);
-    const result = await addClientGym(currentGymId, memberData);
-    if (result.success && result.client) {
-      setMembers([...members, result.client]);
-    } else {
-      console.error('Error agregando cliente:', result.error);
-      alert(`Error al agregar cliente: ${result.error || 'Error desconocido'}`);
-    }
+  const handleAddMember = (memberData: Omit<Member, 'id'>) => {
+    const newMember: Member = {
+      ...memberData,
+      id: generateId(),
+    };
+    setMembers([...members, newMember]);
   };
 
-  const handleUpdateMember = async (id: string, memberData: Partial<Member>) => {
-    const result = await updateClientGym(id, memberData);
-    if (result.success && result.client) {
-      setMembers(members.map(m => m.id === id ? result.client! : m));
-    } else {
-      console.error('Error actualizando cliente:', result.error);
-      alert(`Error al actualizar cliente: ${result.error || 'Error desconocido'}`);
-    }
+  const handleUpdateMember = (id: string, memberData: Partial<Member>) => {
+    setMembers(members.map(m => m.id === id ? { ...m, ...memberData } : m));
   };
 
-  const handleDeleteMember = async (id: string) => {
-    const result = await deleteClientGym(id);
-    if (result.success) {
-      setMembers(members.filter(m => m.id !== id));
-    } else {
-      console.error('Error eliminando cliente:', result.error);
-      alert(`Error al eliminar cliente: ${result.error || 'Error desconocido'}`);
-    }
-  };
-
-  const handlePayMembership = async (id: string, months: number) => {
-    const result = await payMembership(id, months);
-    if (result.success && result.client) {
-      setMembers(members.map(m => m.id === id ? result.client! : m));
-      alert(`Cuota pagada exitosamente. La membresía ha sido renovada por ${months} ${months === 1 ? 'mes' : 'meses'}.`);
-    } else {
-      console.error('Error pagando membresía:', result.error);
-      alert(`Error al pagar cuota: ${result.error || 'Error desconocido'}`);
-    }
+  const handleDeleteMember = (id: string) => {
+    setMembers(members.filter(m => m.id !== id));
   };
 
   const handleCheckIn = (memberId: string) => {
@@ -468,7 +410,6 @@ function App() {
               onAddMember={handleAddMember}
               onUpdateMember={handleUpdateMember}
               onDeleteMember={handleDeleteMember}
-              onPayMembership={handlePayMembership}
             />
           </TabsContent>
 
