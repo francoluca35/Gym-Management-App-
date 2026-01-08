@@ -52,12 +52,15 @@ function App() {
     // Verificar si hay sesión guardada o gimnasio registrado
     const verifySession = async () => {
       try {
-        // Primero verificar si hay sesión guardada (usuario ya logueado)
-        const session = await checkSavedSession();
-        if (session.hasSession && session.gymData) {
-          const savedUser = localStorage.getItem('current_user');
-          const savedShift = localStorage.getItem('selected_shift') as Shift | null;
-          if (savedUser && savedShift) {
+        // Primero verificar si hay sesión guardada COMPLETA (usuario ya logueado)
+        // Solo entrar automáticamente si hay usuario Y turno guardados
+        const savedUser = localStorage.getItem('current_user');
+        const savedShift = localStorage.getItem('selected_shift') as Shift | null;
+        
+        if (savedUser && savedShift) {
+          // Verificar que la sesión sea válida
+          const session = await checkSavedSession();
+          if (session.hasSession && session.gymData) {
             const user = JSON.parse(savedUser);
             setCurrentUser(user);
             setGymId(session.gymData.gym_id);
@@ -67,23 +70,16 @@ function App() {
             setAuthState('authenticated');
             setLoading(false);
             return;
+          } else {
+            // Si la sesión no es válida, limpiar y continuar con el flujo normal
+            localStorage.removeItem('current_user');
+            localStorage.removeItem('selected_shift');
           }
         }
 
-        // Si no hay sesión, verificar si hay gimnasio registrado por IP
-        const gymCheck = await checkGymByIP();
-        if (gymCheck.exists && gymCheck.gym_id && gymCheck.nombre_gym) {
-          // Guardar en localStorage para referencia futura (si no están ya guardados)
-          const currentIP = await getUserIP();
-          localStorage.setItem('gym_ip', currentIP);
-          localStorage.setItem('gym_id', gymCheck.gym_id);
-          
-          setGymInfo({ gym_id: gymCheck.gym_id, nombre_gym: gymCheck.nombre_gym });
-          setGymId(gymCheck.gym_id);
-          setAuthState('shift-selection');
-        } else {
-          setAuthState('register');
-        }
+        // Si no hay sesión de usuario, SIEMPRE ir a PreLogin primero
+        // El usuario elegirá si verificar IP o entrar como administrador
+        setAuthState('register');
       } catch (error) {
         console.error('Error verificando sesión:', error);
         setAuthState('register');
@@ -137,8 +133,21 @@ function App() {
     setAuthState('shift-selection');
   };
 
+  const handleExitIP = () => {
+    // Limpiar datos de IP y volver a PreLogin
+    localStorage.removeItem('gym_ip');
+    localStorage.removeItem('gym_id');
+    localStorage.removeItem('current_user');
+    localStorage.removeItem('selected_shift');
+    setGymInfo(null);
+    setGymId(null);
+    setCurrentUser(null);
+    setSelectedShift(null);
+    setAuthState('register');
+  };
+
   const handleGymDetected = async () => {
-    // Cuando se detecta el gimnasio desde LoginFormSimple, obtener la información completa
+    // Cuando se detecta el gimnasio desde LoginFormSimple (Verificar IP), obtener la información completa
     const gymCheck = await checkGymByIP();
     if (gymCheck.exists && gymCheck.gym_id && gymCheck.nombre_gym) {
       const currentIP = await getUserIP();
@@ -148,6 +157,24 @@ function App() {
       setGymId(gymCheck.gym_id);
       setAuthState('shift-selection');
     }
+  };
+
+  const handleAdminLoginFromPreLogin = async (gymIdParam: string, user: AuthenticatedUser) => {
+    // Cuando el administrador inicia sesión desde PreLogin, guardar y ir a selección de turno
+    setGymId(gymIdParam);
+    setCurrentUser(user);
+    localStorage.setItem('current_user', JSON.stringify(user));
+    
+    // Obtener información del gimnasio
+    const gymCheck = await checkGymByIP();
+    if (gymCheck.exists && gymCheck.gym_id && gymCheck.nombre_gym) {
+      const currentIP = await getUserIP();
+      localStorage.setItem('gym_ip', currentIP);
+      localStorage.setItem('gym_id', gymCheck.gym_id);
+      setGymInfo({ gym_id: gymCheck.gym_id, nombre_gym: gymCheck.nombre_gym });
+    }
+    
+    setAuthState('shift-selection');
   };
 
   const handleLogout = () => {
@@ -242,12 +269,12 @@ function App() {
 
   // Mostrar pantalla de registro/login si no hay gimnasio registrado
   if (authState === 'register') {
-    return <PreLogin onLoginSuccess={handleRegisterSuccess} onGymDetected={handleGymDetected} />;
+    return <PreLogin onLoginSuccess={handleAdminLoginFromPreLogin} onGymDetected={handleGymDetected} />;
   }
 
   // Mostrar selección de turno
   if (authState === 'shift-selection' && gymInfo) {
-    return <ShiftSelection gymName={gymInfo.nombre_gym} onSelectShift={handleShiftSelected} />;
+    return <ShiftSelection gymName={gymInfo.nombre_gym} onSelectShift={handleShiftSelected} onExitIP={handleExitIP} />;
   }
 
   // Mostrar login con turno seleccionado
@@ -281,7 +308,7 @@ function App() {
 
   // Si no estamos autenticados, mostrar selección de turno como fallback
   if (authState !== 'authenticated') {
-    return <ShiftSelection onSelectShift={handleShiftSelected} />;
+    return <ShiftSelection onSelectShift={handleShiftSelected} onExitIP={handleExitIP} />;
   }
 
   return (
