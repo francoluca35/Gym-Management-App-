@@ -5,10 +5,11 @@ import { Input } from "./ui/input";
 import { Badge } from "./ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
-import { Search, UserPlus, Edit, Calendar, Trash2 } from "lucide-react";
+import { Search, UserPlus, Edit, Calendar, Trash2, CreditCard } from "lucide-react";
 import { Member, Membership } from "../types";
 import { MemberForm } from "./MemberForm";
 import { formatDate, getDaysUntilExpiry, getPaymentStatus, formatCurrency } from "../utils/helpers";
+import { Label } from "./ui/label";
 
 interface MembersManagementProps {
   members: Member[];
@@ -16,12 +17,15 @@ interface MembersManagementProps {
   onAddMember: (member: Omit<Member, 'id'>) => void;
   onUpdateMember: (id: string, member: Partial<Member>) => void;
   onDeleteMember: (id: string) => void;
+  onPayMembership: (id: string, months: number) => void;
 }
 
-export function MembersManagement({ members, memberships, onAddMember, onUpdateMember, onDeleteMember }: MembersManagementProps) {
+export function MembersManagement({ members, memberships, onAddMember, onUpdateMember, onDeleteMember, onPayMembership }: MembersManagementProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
+  const [payingMember, setPayingMember] = useState<Member | null>(null);
+  const [paymentMonths, setPaymentMonths] = useState(1);
 
   const filteredMembers = members.filter(member => 
     member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -51,6 +55,23 @@ export function MembersManagement({ members, memberships, onAddMember, onUpdateM
     return memberships.find(m => m.id === membershipId)?.name || 'N/A';
   };
 
+  const getMembershipPrice = (membershipId: string) => {
+    return memberships.find(m => m.id === membershipId)?.price || 0;
+  };
+
+  const handlePayClick = (member: Member) => {
+    setPayingMember(member);
+    setPaymentMonths(1);
+  };
+
+  const handleConfirmPayment = () => {
+    if (payingMember) {
+      onPayMembership(payingMember.id, paymentMonths);
+      setPayingMember(null);
+      setPaymentMonths(1);
+    }
+  };
+
   const getStatusBadge = (member: Member) => {
     const status = getPaymentStatus(member.membershipExpiry);
     
@@ -63,8 +84,75 @@ export function MembersManagement({ members, memberships, onAddMember, onUpdateM
     return <Badge className="bg-green-600 text-white">Activa</Badge>;
   };
 
+  const calculateTotalPrice = () => {
+    if (!payingMember) return 0;
+    const monthlyPrice = getMembershipPrice(payingMember.membershipId);
+    return monthlyPrice * paymentMonths;
+  };
+
   return (
     <div className="space-y-6">
+      {/* Diálogo de pago */}
+      <Dialog open={payingMember !== null} onOpenChange={(open) => !open && setPayingMember(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Pagar Cuota</DialogTitle>
+          </DialogHeader>
+          {payingMember && (
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm text-muted-foreground">Miembro:</p>
+                <p className="font-semibold">{payingMember.name}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Plan de Membresía:</p>
+                <p className="font-semibold">{getMembershipName(payingMember.membershipId)}</p>
+                <p className="text-xs text-muted-foreground">
+                  Precio mensual: {formatCurrency(getMembershipPrice(payingMember.membershipId))}
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="paymentMonths">Cantidad de Meses *</Label>
+                <Input
+                  id="paymentMonths"
+                  type="number"
+                  min="1"
+                  max="12"
+                  value={paymentMonths}
+                  onChange={(e) => setPaymentMonths(Math.max(1, parseInt(e.target.value) || 1))}
+                  required
+                />
+                <p className="text-xs text-muted-foreground">
+                  Selecciona cuántos meses deseas pagar (1-12 meses)
+                </p>
+              </div>
+              <div className="p-4 bg-muted rounded-lg">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">Total a pagar:</span>
+                  <span className="text-2xl font-bold text-primary">
+                    {formatCurrency(calculateTotalPrice())}
+                  </span>
+                </div>
+                {paymentMonths > 1 && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {formatCurrency(getMembershipPrice(payingMember.membershipId))} × {paymentMonths} meses
+                  </p>
+                )}
+              </div>
+              <div className="flex justify-end gap-3 pt-4">
+                <Button variant="outline" onClick={() => setPayingMember(null)}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleConfirmPayment} className="bg-green-600 hover:bg-green-700">
+                  <CreditCard className="w-4 h-4 mr-2" />
+                  Confirmar Pago
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <Card>
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -141,6 +229,21 @@ export function MembersManagement({ members, memberships, onAddMember, onUpdateM
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex gap-1 justify-end">
+                          {/* Botón Pagar Cuota - solo si está por vencer o vencida */}
+                          {(getPaymentStatus(member.membershipExpiry) === 'expiring-soon' || 
+                            getPaymentStatus(member.membershipExpiry) === 'expired') && (
+                            <Button 
+                              variant="default" 
+                              size="sm"
+                              onClick={() => handlePayClick(member)}
+                              className="bg-green-600 hover:bg-green-700 text-white"
+                              title="Pagar cuota"
+                            >
+                              <CreditCard className="w-4 h-4 mr-1" />
+                              Pagar
+                            </Button>
+                          )}
+                          
                           <Dialog open={editingMember?.id === member.id} onOpenChange={(open) => !open && setEditingMember(null)}>
                             <DialogTrigger asChild>
                               <Button 
