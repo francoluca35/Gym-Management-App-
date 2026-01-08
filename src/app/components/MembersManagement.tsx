@@ -219,6 +219,18 @@ export function MembersManagement({ members, memberships, onAddMember, onUpdateM
                       <TableCell className="hidden sm:table-cell">{member.phone}</TableCell>
                       <TableCell>
                         <Badge variant="outline">{getMembershipName(member.membershipId)}</Badge>
+                        {member.registrationFee != null && member.registrationFee > 0 && (
+                          <div className="mt-1">
+                            <span className="text-xs text-muted-foreground">
+                              Inscripción: {formatCurrency(member.registrationFee)}
+                              {member.registrationFeePaid ? (
+                                <span className="text-green-600 ml-1">✓</span>
+                              ) : (
+                                <span className="text-amber-600 ml-1">Pendiente</span>
+                              )}
+                            </span>
+                          </div>
+                        )}
                       </TableCell>
                       <TableCell>{getStatusBadge(member)}</TableCell>
                       <TableCell className="hidden lg:table-cell">

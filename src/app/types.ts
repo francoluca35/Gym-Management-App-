@@ -36,6 +36,8 @@ export interface Member {
   membershipId: string;
   paymentMethod: PaymentMethod;
   lastPaymentDate: string;
+  registrationFee?: number;
+  registrationFeePaid?: boolean;
   imageUrl?: string;
 }
 
