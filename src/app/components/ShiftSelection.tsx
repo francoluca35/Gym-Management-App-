@@ -1,15 +1,16 @@
 import React from "react";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
-import { Dumbbell } from "lucide-react";
+import { Dumbbell, LogOut } from "lucide-react";
 import { Shift } from "../types";
 
 interface ShiftSelectionProps {
   gymName?: string;
   onSelectShift: (shift: Shift) => void;
+  onExitIP?: () => void;
 }
 
-export function ShiftSelection({ gymName, onSelectShift }: ShiftSelectionProps) {
+export function ShiftSelection({ gymName, onSelectShift, onExitIP }: ShiftSelectionProps) {
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-background">
       <Card className="w-full max-w-md">
@@ -48,6 +49,22 @@ export function ShiftSelection({ gymName, onSelectShift }: ShiftSelectionProps) 
           >
             Turno Noche
           </Button>
+          
+          {onExitIP && (
+            <>
+              <div className="pt-2">
+                <Button 
+                  onClick={onExitIP} 
+                  className="w-full"
+                  size="lg"
+                  variant="ghost"
+                >
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Salir de IP
+                </Button>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
     </div>

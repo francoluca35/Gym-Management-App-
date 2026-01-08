@@ -34,7 +34,10 @@ export function PreLogin({ onLoginSuccess, onGymDetected }: PreLoginProps) {
               <TabsTrigger value="register">Registrarse</TabsTrigger>
             </TabsList>
             <TabsContent value="login" className="mt-6">
-              <LoginFormSimple onGymDetected={onGymDetected} />
+              <LoginFormSimple 
+                onGymDetected={onGymDetected} 
+                onAdminLoginSuccess={onLoginSuccess}
+              />
             </TabsContent>
             <TabsContent value="register" className="mt-6">
               <RegisterForm onRegisterSuccess={onLoginSuccess} />

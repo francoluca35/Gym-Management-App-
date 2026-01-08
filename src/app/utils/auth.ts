@@ -297,6 +297,70 @@ export async function checkGymByIP(): Promise<{ exists: boolean; gym_id?: string
   }
 }
 
+// Validar IP y obtener usuario automáticamente (para acceso dentro del gimnasio)
+export async function validateIPAndLogin(): Promise<{ success: boolean; error?: string; gymData?: GymData; user?: GymUser }> {
+  try {
+    const ip = await getUserIP()
+    console.log('Validación IP - IP obtenida:', ip)
+    
+    // Buscar gimnasio por IP
+    const { data: gimnasioData, error: gimnasioError } = await supabase
+      .from('gimnasios')
+      .select('gym_id, nombre_gym, ip_registro')
+      .eq('ip_registro', ip)
+      .eq('activo', true)
+
+    if (gimnasioError) {
+      console.error('Error en consulta gimnasios:', gimnasioError)
+      return { success: false, error: 'Error al buscar gimnasio por IP' }
+    }
+
+    if (!gimnasioData || gimnasioData.length === 0) {
+      return { success: false, error: 'No se encontró un gimnasio registrado con esta dirección IP' }
+    }
+
+    const gimnasio = gimnasioData[0]
+
+    // Obtener usuarios del gimnasio
+    const { data: gymDataArray, error: gymError } = await supabase
+      .from('gyms')
+      .select('*')
+      .eq('gym_id', gimnasio.gym_id)
+
+    if (gymError || !gymDataArray || gymDataArray.length === 0) {
+      return { success: false, error: 'Error al cargar datos del gimnasio' }
+    }
+
+    const gymData = gymDataArray[0]
+    const users: GymUser[] = gymData.users || []
+
+    if (users.length === 0) {
+      return { success: false, error: 'No hay usuarios disponibles en este gimnasio' }
+    }
+
+    // Buscar primero un usuario admin, si no existe, tomar el primero disponible
+    let selectedUser = users.find(u => u.rol === 'admin') || users[0]
+
+    // Guardar datos en localStorage
+    localStorage.setItem('gym_ip', ip)
+    localStorage.setItem('gym_id', gimnasio.gym_id)
+    localStorage.setItem('current_user', JSON.stringify(selectedUser))
+
+    return {
+      success: true,
+      gymData: {
+        gym_id: gimnasio.gym_id,
+        nombre_gym: gymData.nombre_gym,
+        users: users
+      },
+      user: selectedUser
+    }
+  } catch (error: any) {
+    console.error('Error en validateIPAndLogin:', error)
+    return { success: false, error: error.message || 'Error desconocido' }
+  }
+}
+
 // Cerrar sesión
 export function logoutGym() {
   // NO eliminamos gym_ip y gym_id del localStorage para mantener la referencia al gimnasio
