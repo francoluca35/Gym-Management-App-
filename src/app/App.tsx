@@ -18,6 +18,7 @@ import { generateId } from "./utils/helpers";
 import { checkSavedSession, logoutGym, checkGymByIP, getUserIP, GymData } from "./utils/auth";
 import { supabase } from "../lib/supabase";
 import { getClientsGym, addClientGym, updateClientGym, deleteClientGym, payMembership } from "./utils/clients";
+import { getMembershipsGym, addMembershipGym, updateMembershipGym, deleteMembershipGym } from "./utils/memberships";
 
 interface AuthenticatedUser {
   usuario: string;
@@ -92,32 +93,43 @@ function App() {
 
     verifySession();
     
-    // Cargar datos de ejemplo (solo para membresías y asistencia por ahora)
+    // Cargar datos de ejemplo (solo para asistencia por ahora)
     setAttendanceRecords(mockAttendanceRecords);
-    setMemberships(mockMemberships);
+    // Las membresías ahora se cargan desde Supabase cuando se autentica
   }, []);
 
-  // Cargar clientes cuando se autentica y hay gymId
+  // Cargar clientes y membresías cuando se autentica y hay gymId
   useEffect(() => {
-    const loadClients = async () => {
+    const loadData = async () => {
       // Obtener gym_id del estado o localStorage como respaldo
       const currentGymId = gymId || localStorage.getItem('gym_id');
       
       if (currentGymId && authState === 'authenticated') {
+        // Cargar clientes
         console.log('Cargando clientes para gym_id:', currentGymId);
-        const result = await getClientsGym(currentGymId);
-        if (result.success && result.clients) {
-          console.log(`Cargados ${result.clients.length} clientes para el gimnasio ${currentGymId}`);
-          setMembers(result.clients);
+        const clientsResult = await getClientsGym(currentGymId);
+        if (clientsResult.success && clientsResult.clients) {
+          console.log(`Cargados ${clientsResult.clients.length} clientes para el gimnasio ${currentGymId}`);
+          setMembers(clientsResult.clients);
         } else {
-          console.error('Error cargando clientes:', result.error);
-          // Si hay error, mantener array vacío
+          console.error('Error cargando clientes:', clientsResult.error);
           setMembers([]);
+        }
+
+        // Cargar membresías
+        console.log('Cargando membresías para gym_id:', currentGymId);
+        const membershipsResult = await getMembershipsGym(currentGymId);
+        if (membershipsResult.success && membershipsResult.memberships) {
+          console.log(`Cargadas ${membershipsResult.memberships.length} membresías para el gimnasio ${currentGymId}`);
+          setMemberships(membershipsResult.memberships);
+        } else {
+          console.error('Error cargando membresías:', membershipsResult.error);
+          setMemberships([]);
         }
       }
     };
 
-    loadClients();
+    loadData();
   }, [gymId, authState]);
 
   const handleRegisterSuccess = async (gymIdParam: string, user: AuthenticatedUser) => {
@@ -301,20 +313,47 @@ function App() {
     );
   };
 
-  const handleAddMembership = (membershipData: Omit<Membership, 'id'>) => {
-    const newMembership: Membership = {
-      ...membershipData,
-      id: generateId(),
-    };
-    setMemberships([...memberships, newMembership]);
+  const handleAddMembership = async (membershipData: Omit<Membership, 'id'>) => {
+    const currentGymId = gymId || localStorage.getItem('gym_id');
+    if (!currentGymId) {
+      alert('Error: No se pudo identificar el gimnasio. Por favor, inicia sesión nuevamente.');
+      return;
+    }
+
+    const result = await addMembershipGym(currentGymId, membershipData);
+    if (result.success && result.membership) {
+      setMemberships([...memberships, result.membership]);
+      alert('Membresía agregada exitosamente');
+    } else {
+      console.error('Error agregando membresía:', result.error);
+      alert(`Error al agregar membresía: ${result.error || 'Error desconocido'}`);
+    }
   };
 
-  const handleUpdateMembership = (id: string, membershipData: Partial<Membership>) => {
-    setMemberships(memberships.map(m => m.id === id ? { ...m, ...membershipData } : m));
+  const handleUpdateMembership = async (id: string, membershipData: Partial<Membership>) => {
+    const result = await updateMembershipGym(id, membershipData);
+    if (result.success && result.membership) {
+      setMemberships(memberships.map(m => m.id === id ? result.membership! : m));
+      alert('Membresía actualizada exitosamente');
+    } else {
+      console.error('Error actualizando membresía:', result.error);
+      alert(`Error al actualizar membresía: ${result.error || 'Error desconocido'}`);
+    }
   };
 
-  const handleDeleteMembership = (id: string) => {
-    setMemberships(memberships.filter(m => m.id !== id));
+  const handleDeleteMembership = async (id: string) => {
+    if (!confirm('¿Estás seguro de que deseas eliminar esta membresía?')) {
+      return;
+    }
+
+    const result = await deleteMembershipGym(id);
+    if (result.success) {
+      setMemberships(memberships.filter(m => m.id !== id));
+      alert('Membresía eliminada exitosamente');
+    } else {
+      console.error('Error eliminando membresía:', result.error);
+      alert(`Error al eliminar membresía: ${result.error || 'Error desconocido'}`);
+    }
   };
 
   const getRolLabel = (rol: string) => {
