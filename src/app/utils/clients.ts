@@ -23,6 +23,8 @@ export async function addClientGym(gymId: string, memberData: Omit<Member, 'id'>
         membership_id: memberData.membershipId,
         payment_method: memberData.paymentMethod,
         last_payment_date: memberData.lastPaymentDate,
+        registration_fee: memberData.registrationFee || 0,
+        registration_fee_paid: memberData.registrationFeePaid || false,
         image_url: memberData.imageUrl || null
       })
       .select()
@@ -44,6 +46,8 @@ export async function addClientGym(gymId: string, memberData: Omit<Member, 'id'>
       membershipId: data.membership_id,
       paymentMethod: data.payment_method as PaymentMethod,
       lastPaymentDate: data.last_payment_date,
+      registrationFee: data.registration_fee || 0,
+      registrationFeePaid: data.registration_fee_paid || false,
       imageUrl: data.image_url || undefined
     }
 
@@ -86,6 +90,8 @@ export async function getClientsGym(gymId: string): Promise<{ success: boolean; 
       membershipId: item.membership_id,
       paymentMethod: item.payment_method as PaymentMethod,
       lastPaymentDate: item.last_payment_date,
+      registrationFee: item.registration_fee || 0,
+      registrationFeePaid: item.registration_fee_paid || false,
       imageUrl: item.image_url || undefined
     }))
 
@@ -109,6 +115,8 @@ export async function updateClientGym(clientId: string, memberData: Partial<Memb
     if (memberData.membershipId !== undefined) updateData.membership_id = memberData.membershipId
     if (memberData.paymentMethod !== undefined) updateData.payment_method = memberData.paymentMethod
     if (memberData.lastPaymentDate !== undefined) updateData.last_payment_date = memberData.lastPaymentDate
+    if (memberData.registrationFee !== undefined) updateData.registration_fee = memberData.registrationFee
+    if (memberData.registrationFeePaid !== undefined) updateData.registration_fee_paid = memberData.registrationFeePaid
     if (memberData.imageUrl !== undefined) updateData.image_url = memberData.imageUrl
 
     const { data, error } = await supabase
@@ -134,6 +142,8 @@ export async function updateClientGym(clientId: string, memberData: Partial<Memb
       membershipId: data.membership_id,
       paymentMethod: data.payment_method as PaymentMethod,
       lastPaymentDate: data.last_payment_date,
+      registrationFee: data.registration_fee || 0,
+      registrationFeePaid: data.registration_fee_paid || false,
       imageUrl: data.image_url || undefined
     }
 
@@ -201,6 +211,8 @@ export async function payMembership(clientId: string, months: number = 1): Promi
       membershipId: data.membership_id,
       paymentMethod: data.payment_method as PaymentMethod,
       lastPaymentDate: data.last_payment_date,
+      registrationFee: data.registration_fee || 0,
+      registrationFeePaid: data.registration_fee_paid || false,
       imageUrl: data.image_url || undefined
     }
 

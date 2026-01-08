@@ -23,6 +23,8 @@ export function MemberForm({ initialData, memberships, onSubmit, onCancel }: Mem
     membershipId: initialData?.membershipId || '',
     paymentMethod: initialData?.paymentMethod || 'cash' as PaymentMethod,
     lastPaymentDate: initialData?.lastPaymentDate || new Date().toISOString().split('T')[0],
+    registrationFee: initialData?.registrationFee || 0,
+    registrationFeePaid: initialData?.registrationFeePaid || false,
   });
 
   const selectedMembership = memberships.find(m => m.id === formData.membershipId);
@@ -139,6 +141,45 @@ export function MemberForm({ initialData, memberships, onSubmit, onCancel }: Mem
             required
           />
         </div>
+
+        {/* Ficha de Inscripción - solo para nuevos miembros */}
+        {!initialData && (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="registrationFee">Ficha de Inscripción *</Label>
+              <Input
+                id="registrationFee"
+                type="text"
+                value={formData.registrationFee || ''}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/[^0-9.,]/g, '').replace(',', '.');
+                  const numValue = parseFloat(value) || 0;
+                  setFormData({ ...formData, registrationFee: numValue });
+                }}
+                placeholder="0.00"
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                Monto de la ficha de inscripción (se cobra una sola vez al agregar el miembro)
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="registrationFeePaid"
+                  checked={formData.registrationFeePaid}
+                  onChange={(e) => setFormData({ ...formData, registrationFeePaid: e.target.checked })}
+                  className="rounded border-gray-300"
+                />
+                <Label htmlFor="registrationFeePaid" className="cursor-pointer">
+                  Ficha de inscripción pagada
+                </Label>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       <div className="flex justify-end gap-3 pt-4">
