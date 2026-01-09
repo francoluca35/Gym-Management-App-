@@ -39,6 +39,7 @@ export interface Member {
   registrationFee?: number;
   registrationFeePaid?: boolean;
   imageUrl?: string;
+  rfidCardId?: string; // ID único de la tarjeta RFID/NFC
 }
 
 export interface AttendanceRecord {
@@ -46,4 +47,17 @@ export interface AttendanceRecord {
   memberId: string;
   checkIn: string;
   checkOut?: string;
+}
+
+// Nueva estructura para asistencias en la base de datos
+export interface AttendanceGym {
+  id: string;
+  gym_id: string;
+  member_id: string;
+  member_name: string;
+  membership_id: string;
+  entrada: string[]; // Array de timestamps de entrada
+  salida: string[]; // Array de timestamps de salida
+  created_at?: string;
+  updated_at?: string;
 }

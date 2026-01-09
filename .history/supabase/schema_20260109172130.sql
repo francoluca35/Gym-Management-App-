@@ -81,7 +81,6 @@ CREATE TABLE IF NOT EXISTS client_gym (
 CREATE INDEX IF NOT EXISTS idx_client_gym_gym_id ON client_gym(gym_id);
 CREATE INDEX IF NOT EXISTS idx_client_gym_email ON client_gym(email);
 CREATE INDEX IF NOT EXISTS idx_client_gym_membership_expiry ON client_gym(membership_expiry);
-CREATE INDEX IF NOT EXISTS idx_client_gym_rfid_card_id ON client_gym(rfid_card_id);
 
 -- Trigger para actualizar updated_at
 CREATE TRIGGER update_client_gym_updated_at BEFORE UPDATE ON client_gym

@@ -25,7 +25,8 @@ export async function addClientGym(gymId: string, memberData: Omit<Member, 'id'>
         last_payment_date: memberData.lastPaymentDate,
         registration_fee: memberData.registrationFee || 0,
         registration_fee_paid: memberData.registrationFeePaid || false,
-        image_url: memberData.imageUrl || null
+        image_url: memberData.imageUrl || null,
+        rfid_card_id: memberData.rfidCardId || null
       })
       .select()
       .single()
@@ -48,7 +49,8 @@ export async function addClientGym(gymId: string, memberData: Omit<Member, 'id'>
       lastPaymentDate: data.last_payment_date,
       registrationFee: data.registration_fee || 0,
       registrationFeePaid: data.registration_fee_paid || false,
-      imageUrl: data.image_url || undefined
+      imageUrl: data.image_url || undefined,
+      rfidCardId: data.rfid_card_id || undefined
     }
 
     return { success: true, client }
@@ -92,7 +94,8 @@ export async function getClientsGym(gymId: string): Promise<{ success: boolean; 
       lastPaymentDate: item.last_payment_date,
       registrationFee: item.registration_fee || 0,
       registrationFeePaid: item.registration_fee_paid || false,
-      imageUrl: item.image_url || undefined
+      imageUrl: item.image_url || undefined,
+      rfidCardId: item.rfid_card_id || undefined
     }))
 
     return { success: true, clients }
@@ -118,6 +121,7 @@ export async function updateClientGym(clientId: string, memberData: Partial<Memb
     if (memberData.registrationFee !== undefined) updateData.registration_fee = memberData.registrationFee
     if (memberData.registrationFeePaid !== undefined) updateData.registration_fee_paid = memberData.registrationFeePaid
     if (memberData.imageUrl !== undefined) updateData.image_url = memberData.imageUrl
+    if (memberData.rfidCardId !== undefined) updateData.rfid_card_id = memberData.rfidCardId
 
     const { data, error } = await supabase
       .from('client_gym')
@@ -144,7 +148,8 @@ export async function updateClientGym(clientId: string, memberData: Partial<Memb
       lastPaymentDate: data.last_payment_date,
       registrationFee: data.registration_fee || 0,
       registrationFeePaid: data.registration_fee_paid || false,
-      imageUrl: data.image_url || undefined
+      imageUrl: data.image_url || undefined,
+      rfidCardId: data.rfid_card_id || undefined
     }
 
     return { success: true, client }
@@ -213,7 +218,8 @@ export async function payMembership(clientId: string, months: number = 1): Promi
       lastPaymentDate: data.last_payment_date,
       registrationFee: data.registration_fee || 0,
       registrationFeePaid: data.registration_fee_paid || false,
-      imageUrl: data.image_url || undefined
+      imageUrl: data.image_url || undefined,
+      rfidCardId: data.rfid_card_id || undefined
     }
 
     return { success: true, client }

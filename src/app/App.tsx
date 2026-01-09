@@ -19,6 +19,7 @@ import { checkSavedSession, logoutGym, checkGymByIP, getUserIP, GymData } from "
 import { supabase } from "../lib/supabase";
 import { getClientsGym, addClientGym, updateClientGym, deleteClientGym, payMembership } from "./utils/clients";
 import { getMembershipsGym, addMembershipGym, updateMembershipGym, deleteMembershipGym } from "./utils/memberships";
+import { checkInMember, checkOutMember, getAttendancesGym } from "./utils/attendances";
 
 interface AuthenticatedUser {
   usuario: string;
@@ -93,12 +94,10 @@ function App() {
 
     verifySession();
     
-    // Cargar datos de ejemplo (solo para asistencia por ahora)
-    setAttendanceRecords(mockAttendanceRecords);
-    // Las membresías ahora se cargan desde Supabase cuando se autentica
+    // Las asistencias y membresías ahora se cargan desde Supabase cuando se autentica
   }, []);
 
-  // Cargar clientes y membresías cuando se autentica y hay gymId
+  // Cargar clientes, membresías y asistencias cuando se autentica y hay gymId
   useEffect(() => {
     const loadData = async () => {
       // Obtener gym_id del estado o localStorage como respaldo
@@ -125,6 +124,33 @@ function App() {
         } else {
           console.error('Error cargando membresías:', membershipsResult.error);
           setMemberships([]);
+        }
+
+        // Cargar asistencias y convertir a formato AttendanceRecord para compatibilidad
+        console.log('Cargando asistencias para gym_id:', currentGymId);
+        const attendancesResult = await getAttendancesGym(currentGymId);
+        if (attendancesResult.success && attendancesResult.attendances) {
+          console.log(`Cargadas ${attendancesResult.attendances.length} asistencias para el gimnasio ${currentGymId}`);
+          // Convertir AttendanceGym a AttendanceRecord para mostrar sesiones activas
+          const records: AttendanceRecord[] = [];
+          attendancesResult.attendances.forEach(attendance => {
+            const entradas = attendance.entrada || [];
+            const salidas = attendance.salida || [];
+            
+            // Crear registros para cada entrada/salida
+            entradas.forEach((entrada, index) => {
+              records.push({
+                id: `${attendance.id}-${index}`,
+                memberId: attendance.member_id,
+                checkIn: entrada,
+                checkOut: salidas[index] || undefined
+              });
+            });
+          });
+          setAttendanceRecords(records);
+        } else {
+          console.error('Error cargando asistencias:', attendancesResult.error);
+          setAttendanceRecords([]);
         }
       }
     };
@@ -296,21 +322,93 @@ function App() {
     }
   };
 
-  const handleCheckIn = (memberId: string) => {
-    const newRecord: AttendanceRecord = {
-      id: generateId(),
-      memberId,
-      checkIn: new Date().toISOString(),
-    };
-    setAttendanceRecords([...attendanceRecords, newRecord]);
+  const handleCheckIn = async (memberId: string) => {
+    const currentGymId = gymId || localStorage.getItem('gym_id');
+    if (!currentGymId) {
+      alert('Error: No se pudo identificar el gimnasio. Por favor, inicia sesión nuevamente.');
+      return;
+    }
+
+    const member = members.find(m => m.id === memberId);
+    if (!member) {
+      alert('Error: No se encontró el miembro.');
+      return;
+    }
+
+    const result = await checkInMember(currentGymId, member);
+    if (result.success && result.record) {
+      // Recargar asistencias para actualizar la vista
+      const attendancesResult = await getAttendancesGym(currentGymId);
+      if (attendancesResult.success && attendancesResult.attendances) {
+        const records: AttendanceRecord[] = [];
+        attendancesResult.attendances.forEach(attendance => {
+          const entradas = attendance.entrada || [];
+          const salidas = attendance.salida || [];
+          
+          entradas.forEach((entrada, index) => {
+            records.push({
+              id: `${attendance.id}-${index}`,
+              memberId: attendance.member_id,
+              checkIn: entrada,
+              checkOut: salidas[index] || undefined
+            });
+          });
+        });
+        setAttendanceRecords(records);
+      }
+      alert(`Entrada registrada para ${member.name}`);
+    } else {
+      console.error('Error fichando entrada:', result.error);
+      alert(`Error al fichar entrada: ${result.error || 'Error desconocido'}`);
+    }
   };
 
-  const handleCheckOut = (recordId: string) => {
-    setAttendanceRecords(
-      attendanceRecords.map(r => 
-        r.id === recordId ? { ...r, checkOut: new Date().toISOString() } : r
-      )
-    );
+  const handleCheckOut = async (recordId: string) => {
+    const currentGymId = gymId || localStorage.getItem('gym_id');
+    if (!currentGymId) {
+      alert('Error: No se pudo identificar el gimnasio. Por favor, inicia sesión nuevamente.');
+      return;
+    }
+
+    // Encontrar el registro y el miembro
+    const record = attendanceRecords.find(r => r.id === recordId);
+    if (!record) {
+      alert('Error: No se encontró el registro de asistencia.');
+      return;
+    }
+
+    const member = members.find(m => m.id === record.memberId);
+    if (!member) {
+      alert('Error: No se encontró el miembro.');
+      return;
+    }
+
+    const result = await checkOutMember(currentGymId, member);
+    if (result.success && result.record) {
+      // Recargar asistencias para actualizar la vista
+      const attendancesResult = await getAttendancesGym(currentGymId);
+      if (attendancesResult.success && attendancesResult.attendances) {
+        const records: AttendanceRecord[] = [];
+        attendancesResult.attendances.forEach(attendance => {
+          const entradas = attendance.entrada || [];
+          const salidas = attendance.salida || [];
+          
+          entradas.forEach((entrada, index) => {
+            records.push({
+              id: `${attendance.id}-${index}`,
+              memberId: attendance.member_id,
+              checkIn: entrada,
+              checkOut: salidas[index] || undefined
+            });
+          });
+        });
+        setAttendanceRecords(records);
+      }
+      alert(`Salida registrada para ${member.name}`);
+    } else {
+      console.error('Error fichando salida:', result.error);
+      alert(`Error al fichar salida: ${result.error || 'Error desconocido'}`);
+    }
   };
 
   const handleAddMembership = async (membershipData: Omit<Membership, 'id'>) => {
