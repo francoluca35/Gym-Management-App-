@@ -10,6 +10,8 @@ import { Member, Membership } from "../types";
 import { MemberForm } from "./MemberForm";
 import { formatDate, getDaysUntilExpiry, getPaymentStatus, formatCurrency } from "../utils/helpers";
 import { Label } from "./ui/label";
+import { connectRFIDReader, readRFIDCard, isRFIDReaderConnected, disconnectRFIDReader } from "../utils/rfid";
+import { updateClientGym } from "../utils/clients";
 
 interface MembersManagementProps {
   members: Member[];
@@ -26,6 +28,7 @@ export function MembersManagement({ members, memberships, onAddMember, onUpdateM
   const [editingMember, setEditingMember] = useState<Member | null>(null);
   const [payingMember, setPayingMember] = useState<Member | null>(null);
   const [paymentMonths, setPaymentMonths] = useState(1);
+  const [registeringCardFor, setRegisteringCardFor] = useState<string | null>(null);
 
   const filteredMembers = members.filter(member => 
     member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -88,6 +91,52 @@ export function MembersManagement({ members, memberships, onAddMember, onUpdateM
     if (!payingMember) return 0;
     const monthlyPrice = getMembershipPrice(payingMember.membershipId);
     return monthlyPrice * paymentMonths;
+  };
+
+  const handleRegisterCard = async (member: Member) => {
+    setRegisteringCardFor(member.id);
+    
+    try {
+      // Verificar/conectar el lector
+      if (!isRFIDReaderConnected()) {
+        const connectResult = await connectRFIDReader();
+        if (!connectResult.success) {
+          alert(`Error: ${connectResult.error}`);
+          setRegisteringCardFor(null);
+          return;
+        }
+      }
+
+      // Leer la tarjeta
+      const result = await readRFIDCard();
+      
+      if (result.success && result.cardId) {
+        // Actualizar el miembro con el card_id
+        const updateResult = await updateClientGym(member.id, { rfidCardId: result.cardId });
+        
+        if (updateResult.success && updateResult.client) {
+          // Actualizar el miembro en la lista local
+          onUpdateMember(member.id, { rfidCardId: result.cardId });
+          alert(`¡Tarjeta RFID registrada exitosamente para ${member.name}! ID: ${result.cardId}`);
+        } else {
+          alert(`Error al actualizar el miembro: ${updateResult.error || 'Error desconocido'}`);
+        }
+      } else {
+        alert(`Error al leer tarjeta: ${result.error || 'Error desconocido'}`);
+      }
+    } catch (error: any) {
+      console.error('Error registrando tarjeta:', error);
+      alert(`Error: ${error.message || 'Error desconocido'}`);
+    } finally {
+      setRegisteringCardFor(null);
+    }
+  };
+
+  const handlePayRegistrationFee = async (member: Member) => {
+    if (confirm(`¿Confirmar pago de inscripción de ${formatCurrency(member.registrationFee || 0)} para ${member.name}?`)) {
+      onUpdateMember(member.id, { registrationFeePaid: true });
+      alert(`Inscripción marcada como pagada para ${member.name}`);
+    }
   };
 
   return (
@@ -220,7 +269,7 @@ export function MembersManagement({ members, memberships, onAddMember, onUpdateM
                       <TableCell>
                         <Badge variant="outline">{getMembershipName(member.membershipId)}</Badge>
                         {member.registrationFee != null && member.registrationFee > 0 && (
-                          <div className="mt-1">
+                          <div className="mt-1 flex items-center gap-2">
                             <span className="text-xs text-muted-foreground">
                               Inscripción: {formatCurrency(member.registrationFee)}
                               {member.registrationFeePaid ? (
@@ -229,6 +278,17 @@ export function MembersManagement({ members, memberships, onAddMember, onUpdateM
                                 <span className="text-amber-600 ml-1">Pendiente</span>
                               )}
                             </span>
+                            {!member.registrationFeePaid && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handlePayRegistrationFee(member)}
+                                className="h-5 px-2 text-xs bg-green-600 hover:bg-green-700 text-white border-0"
+                                title="Pagar inscripción"
+                              >
+                                Pagar
+                              </Button>
+                            )}
                           </div>
                         )}
                       </TableCell>
@@ -255,13 +315,31 @@ export function MembersManagement({ members, memberships, onAddMember, onUpdateM
                               Pagar
                             </Button>
                           )}
-                          
-                          <Dialog open={editingMember?.id === member.id} onOpenChange={(open) => !open && setEditingMember(null)}>
+                          {/* Botón Registrar Tarjeta RFID - solo si no tiene tarjeta registrada */}
+                          {!member.rfidCardId && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleRegisterCard(member)}
+                              disabled={registeringCardFor === member.id}
+                              className="gap-1"
+                              title="Registrar tarjeta RFID"
+                            >
+                              <CreditCard className="w-4 h-4" />
+                              {registeringCardFor === member.id ? '...' : 'RFID'}
+                            </Button>
+                          )}
+                          <Dialog open={editingMember?.id === member.id} onOpenChange={(open) => {
+                            if (!open) {
+                              setEditingMember(null);
+                            } else {
+                              setEditingMember(member);
+                            }
+                          }}>
                             <DialogTrigger asChild>
                               <Button 
                                 variant="ghost" 
                                 size="sm"
-                                onClick={() => setEditingMember(member)}
                               >
                                 <Edit className="w-4 h-4" />
                               </Button>

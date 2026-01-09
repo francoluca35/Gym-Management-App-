@@ -71,7 +71,6 @@ CREATE TABLE IF NOT EXISTS client_gym (
   registration_fee NUMERIC(10, 2) DEFAULT 0,
   registration_fee_paid BOOLEAN DEFAULT false,
   image_url TEXT,
-  rfid_card_id TEXT UNIQUE, -- ID único de la tarjeta RFID/NFC
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   CONSTRAINT fk_client_gym_gym_id FOREIGN KEY (gym_id) REFERENCES gimnasios(gym_id) ON DELETE CASCADE
@@ -81,7 +80,6 @@ CREATE TABLE IF NOT EXISTS client_gym (
 CREATE INDEX IF NOT EXISTS idx_client_gym_gym_id ON client_gym(gym_id);
 CREATE INDEX IF NOT EXISTS idx_client_gym_email ON client_gym(email);
 CREATE INDEX IF NOT EXISTS idx_client_gym_membership_expiry ON client_gym(membership_expiry);
-CREATE INDEX IF NOT EXISTS idx_client_gym_rfid_card_id ON client_gym(rfid_card_id);
 
 -- Trigger para actualizar updated_at
 CREATE TRIGGER update_client_gym_updated_at BEFORE UPDATE ON client_gym
@@ -106,29 +104,4 @@ CREATE INDEX IF NOT EXISTS idx_membresia_gym_name ON membresia_gym(name);
 
 -- Trigger para actualizar updated_at
 CREATE TRIGGER update_membresia_gym_updated_at BEFORE UPDATE ON membresia_gym
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- Tabla para asistencias del gimnasio (asistencia_gym)
--- Estructura: cada miembro tiene un registro con arrays de entradas y salidas
-CREATE TABLE IF NOT EXISTS asistencia_gym (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  gym_id TEXT NOT NULL,
-  member_id UUID NOT NULL,
-  member_name TEXT NOT NULL,
-  membership_id TEXT NOT NULL,
-  entrada TIMESTAMP WITH TIME ZONE[] DEFAULT ARRAY[]::TIMESTAMP WITH TIME ZONE[],
-  salida TIMESTAMP WITH TIME ZONE[] DEFAULT ARRAY[]::TIMESTAMP WITH TIME ZONE[],
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  CONSTRAINT fk_asistencia_gym_gym_id FOREIGN KEY (gym_id) REFERENCES gimnasios(gym_id) ON DELETE CASCADE,
-  CONSTRAINT fk_asistencia_gym_member_id FOREIGN KEY (member_id) REFERENCES client_gym(id) ON DELETE CASCADE
-);
-
--- Índices para mejorar el rendimiento
-CREATE INDEX IF NOT EXISTS idx_asistencia_gym_gym_id ON asistencia_gym(gym_id);
-CREATE INDEX IF NOT EXISTS idx_asistencia_gym_member_id ON asistencia_gym(member_id);
-CREATE INDEX IF NOT EXISTS idx_asistencia_gym_member_name ON asistencia_gym(member_name);
-
--- Trigger para actualizar updated_at
-CREATE TRIGGER update_asistencia_gym_updated_at BEFORE UPDATE ON asistencia_gym
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

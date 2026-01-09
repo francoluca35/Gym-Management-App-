@@ -1,12 +1,13 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { Badge } from "./ui/badge";
-import { Search, LogIn, LogOut, Clock } from "lucide-react";
+import { Search, LogIn, LogOut, Clock, CreditCard, Wifi, WifiOff } from "lucide-react";
 import { Member, AttendanceRecord } from "../types";
 import { formatTime, formatDate } from "../utils/helpers";
+import { connectRFIDReader, startContinuousReading, stopContinuousReading, disconnectRFIDReader, isRFIDReaderConnected } from "../utils/rfid";
 
 interface AttendanceControlProps {
   members: Member[];
@@ -17,6 +18,9 @@ interface AttendanceControlProps {
 
 export function AttendanceControl({ members, attendanceRecords, onCheckIn, onCheckOut }: AttendanceControlProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [isRFIDConnected, setIsRFIDConnected] = useState(false);
+  const [isReading, setIsReading] = useState(false);
+  const [lastScannedCard, setLastScannedCard] = useState<string | null>(null);
 
   const filteredMembers = members.filter(member => 
     member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -51,13 +55,161 @@ export function AttendanceControl({ members, attendanceRecords, onCheckIn, onChe
     return `${hours}h ${mins}m`;
   };
 
+  // Verificar conexión al montar
+  useEffect(() => {
+    setIsRFIDConnected(isRFIDReaderConnected());
+    
+    // Limpiar al desmontar
+    return () => {
+      if (isReading) {
+        stopContinuousReading();
+      }
+    };
+  }, []);
+
+  const handleConnectRFID = async () => {
+    const result = await connectRFIDReader();
+    if (result.success) {
+      setIsRFIDConnected(true);
+      alert('Lector RFID conectado. Ahora puedes escanear tarjetas para fichar entrada/salida.');
+    } else {
+      alert(`Error: ${result.error}`);
+    }
+  };
+
+  const handleStartReading = async () => {
+    if (!isRFIDConnected) {
+      const connectResult = await connectRFIDReader();
+      if (!connectResult.success) {
+        alert(`Error: ${connectResult.error}`);
+        return;
+      }
+      setIsRFIDConnected(true);
+    }
+
+    setIsReading(true);
+    const result = await startContinuousReading((cardId: string) => {
+      // Buscar el miembro por su tarjeta RFID
+      const member = members.find(m => m.rfidCardId === cardId);
+      
+      if (member) {
+        setLastScannedCard(cardId);
+        
+        // Verificar si ya está dentro o fuera
+        const checkedIn = isCheckedIn(member.id);
+        const sessionId = getActiveSessionId(member.id);
+        
+        if (checkedIn && sessionId) {
+          // Fichar salida
+          onCheckOut(sessionId);
+          alert(`Salida registrada para ${member.name}`);
+        } else {
+          // Fichar entrada
+          onCheckIn(member.id);
+          alert(`Entrada registrada para ${member.name}`);
+        }
+      } else {
+        alert(`Tarjeta no reconocida. ID: ${cardId}`);
+      }
+    });
+
+    if (!result.success) {
+      setIsReading(false);
+      alert(`Error: ${result.error}`);
+    }
+  };
+
+  const handleStopReading = async () => {
+    await stopContinuousReading();
+    setIsReading(false);
+  };
+
+  const handleDisconnectRFID = async () => {
+    if (isReading) {
+      await stopContinuousReading();
+      setIsReading(false);
+    }
+    await disconnectRFIDReader();
+    setIsRFIDConnected(false);
+  };
+
   return (
     <div className="space-y-6">
+      {/* Panel de Control RFID */}
+      <Card className="border-primary/50">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CreditCard className="w-5 h-5" />
+            Control de Asistencia por RFID/NFC
+          </CardTitle>
+          <CardDescription>
+            Conecta el lector RFID y escanea las tarjetas para fichar entrada/salida automáticamente
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              {isRFIDConnected ? (
+                <>
+                  <Wifi className="w-5 h-5 text-green-600" />
+                  <span className="text-sm font-medium text-green-600">Lector Conectado</span>
+                </>
+              ) : (
+                <>
+                  <WifiOff className="w-5 h-5 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">Lector Desconectado</span>
+                </>
+              )}
+            </div>
+            
+            {!isRFIDConnected ? (
+              <Button onClick={handleConnectRFID} variant="outline" className="gap-2">
+                <Wifi className="w-4 h-4" />
+                Conectar Lector RFID
+              </Button>
+            ) : (
+              <div className="flex gap-2">
+                {!isReading ? (
+                  <Button onClick={handleStartReading} className="gap-2 bg-green-600 hover:bg-green-700">
+                    <CreditCard className="w-4 h-4" />
+                    Iniciar Lectura
+                  </Button>
+                ) : (
+                  <Button onClick={handleStopReading} variant="destructive" className="gap-2">
+                    <CreditCard className="w-4 h-4" />
+                    Detener Lectura
+                  </Button>
+                )}
+                <Button onClick={handleDisconnectRFID} variant="outline" className="gap-2">
+                  <WifiOff className="w-4 h-4" />
+                  Desconectar
+                </Button>
+              </div>
+            )}
+          </div>
+          
+          {isReading && (
+            <div className="p-3 bg-green-100 dark:bg-green-900/20 rounded-lg">
+              <p className="text-sm text-green-700 dark:text-green-400 flex items-center gap-2">
+                <Clock className="w-4 h-4 animate-pulse" />
+                Escuchando tarjetas... Acerca una tarjeta al lector para fichar entrada/salida.
+              </p>
+            </div>
+          )}
+          
+          {lastScannedCard && (
+            <div className="p-2 bg-muted rounded text-xs text-muted-foreground">
+              Última tarjeta escaneada: {lastScannedCard}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Registrar Asistencia</CardTitle>
-            <CardDescription>Busca un miembro para registrar ingreso/egreso</CardDescription>
+            <CardTitle>Registrar Asistencia Manual</CardTitle>
+            <CardDescription>Busca un miembro para registrar ingreso/egreso manualmente</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="relative">

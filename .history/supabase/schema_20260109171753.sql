@@ -71,7 +71,6 @@ CREATE TABLE IF NOT EXISTS client_gym (
   registration_fee NUMERIC(10, 2) DEFAULT 0,
   registration_fee_paid BOOLEAN DEFAULT false,
   image_url TEXT,
-  rfid_card_id TEXT UNIQUE, -- ID único de la tarjeta RFID/NFC
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   CONSTRAINT fk_client_gym_gym_id FOREIGN KEY (gym_id) REFERENCES gimnasios(gym_id) ON DELETE CASCADE
@@ -81,7 +80,6 @@ CREATE TABLE IF NOT EXISTS client_gym (
 CREATE INDEX IF NOT EXISTS idx_client_gym_gym_id ON client_gym(gym_id);
 CREATE INDEX IF NOT EXISTS idx_client_gym_email ON client_gym(email);
 CREATE INDEX IF NOT EXISTS idx_client_gym_membership_expiry ON client_gym(membership_expiry);
-CREATE INDEX IF NOT EXISTS idx_client_gym_rfid_card_id ON client_gym(rfid_card_id);
 
 -- Trigger para actualizar updated_at
 CREATE TRIGGER update_client_gym_updated_at BEFORE UPDATE ON client_gym

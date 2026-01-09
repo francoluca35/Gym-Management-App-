@@ -74,9 +74,14 @@ export function MembershipsManagement({
               <CardTitle>Gestión de Membresías</CardTitle>
               <CardDescription>Administra los planes de membresía del gimnasio</CardDescription>
             </div>
-            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
+              setIsAddDialogOpen(open);
+              if (open) {
+                setFormData({ name: '', price: 0, description: '' });
+              }
+            }}>
               <DialogTrigger asChild>
-                <Button onClick={handleOpenAdd} className="gap-2">
+                <Button className="gap-2">
                   <Plus className="w-4 h-4" />
                   Nueva Membresía
                 </Button>
@@ -151,13 +156,18 @@ export function MembershipsManagement({
                     <p className="text-sm text-muted-foreground">{membership.description}</p>
                     
                     <div className="flex gap-2">
-                      <Dialog open={editingMembership?.id === membership.id} onOpenChange={(open) => !open && setEditingMembership(null)}>
+                      <Dialog open={editingMembership?.id === membership.id} onOpenChange={(open) => {
+                        if (!open) {
+                          setEditingMembership(null);
+                        } else {
+                          handleOpenEdit(membership);
+                        }
+                      }}>
                         <DialogTrigger asChild>
                           <Button 
                             variant="outline" 
                             size="sm" 
                             className="flex-1 gap-2"
-                            onClick={() => handleOpenEdit(membership)}
                           >
                             <Edit className="w-4 h-4" />
                             Editar
