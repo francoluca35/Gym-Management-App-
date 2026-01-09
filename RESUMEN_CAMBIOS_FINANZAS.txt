@@ -1,0 +1,61 @@
+═══════════════════════════════════════════════════════════════
+  RESUMEN DE CAMBIOS - MÓDULO DE FINANZAS
+═══════════════════════════════════════════════════════════════
+
+📋 CAMBIOS PRINCIPALES
+───────────────────────────────────────────────────────────────
+
+1. ✅ REEMPLAZO DE TARJETA DE ESTADO
+   - Eliminada: Tarjeta verde/roja de estado de conexión a BD
+   - Agregada: Tarjeta con botones de acción
+
+2. ✅ BOTÓN "GENERAR PDF"
+   - Genera reporte financiero en formato PDF
+   - Incluye: KPIs, transacciones recientes, resumen
+   - Nombre: reporte-financiero-YYYY-MM-DD.pdf
+
+3. ✅ BOTÓN "GENERAR EXCEL"
+   - Genera archivo Excel con 3 hojas:
+     • Resumen (KPIs y desglose)
+     • Transacciones (últimos 30 días)
+     • Ingresos Mensuales (últimos 12 meses)
+   - Nombre: reporte-financiero-YYYY-MM-DD.xlsx
+
+4. ✅ BOTÓN "BORRAR DATOS POR MES"
+   - Diálogo modal para seleccionar año y meses
+   - Borra solo datos de clientes (tabla client_gym)
+   - Busca por: last_payment_date y registration_fee_payment_date
+   - Incluye confirmación antes de borrar
+   - Actualiza lista de miembros automáticamente
+
+📦 DEPENDENCIAS NUEVAS
+───────────────────────────────────────────────────────────────
+- jspdf: ^4.0.0
+- xlsx: (última versión)
+
+📁 ARCHIVOS MODIFICADOS
+───────────────────────────────────────────────────────────────
+1. src/app/components/FinancialDashboard.tsx
+   - Agregadas funciones: handleGeneratePDF, handleGenerateExcel, handleDeleteMonthData
+   - Agregado estado para diálogo de borrado
+   - Agregados imports: jsPDF, XLSX, componentes UI
+
+2. src/app/App.tsx
+   - Actualizado props de FinancialDashboard
+   - Agregado callback onMembersUpdated
+
+3. package.json
+   - Agregadas dependencias jspdf y xlsx
+
+🔧 INSTALACIÓN
+───────────────────────────────────────────────────────────────
+Ejecutar: npm install
+
+⚠️ NOTAS IMPORTANTES
+───────────────────────────────────────────────────────────────
+- El borrado solo afecta a client_gym del gym_id actual
+- Se requiere confirmación antes de borrar
+- Los reportes usan datos en tiempo real
+- El borrado se hace en lotes de 100 registros
+
+═══════════════════════════════════════════════════════════════
