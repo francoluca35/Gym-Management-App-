@@ -25,6 +25,7 @@ export function MemberForm({ initialData, memberships, onSubmit, onCancel }: Mem
     membershipId: initialData?.membershipId || '',
     paymentMethod: initialData?.paymentMethod || 'cash' as PaymentMethod,
     lastPaymentDate: initialData?.lastPaymentDate || new Date().toISOString().split('T')[0],
+    lastPaymentAmount: initialData?.lastPaymentAmount || 0,
     registrationFee: initialData?.registrationFee || 0,
     registrationFeePaid: initialData?.registrationFeePaid || false,
     rfidCardId: initialData?.rfidCardId || '',
@@ -79,7 +80,42 @@ export function MemberForm({ initialData, memberships, onSubmit, onCancel }: Mem
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    
+    // Si es un nuevo miembro (no hay initialData), calcular lastPaymentAmount
+    // basándose en los meses pagados (diferencia entre membershipStart y membershipExpiry)
+    let calculatedData = { ...formData };
+    
+    // Calcular lastPaymentAmount solo si es un nuevo miembro y hay datos necesarios
+    if (!initialData && formData.membershipId && formData.membershipStart && formData.membershipExpiry) {
+      const startDate = new Date(formData.membershipStart);
+      const expiryDate = new Date(formData.membershipExpiry);
+      
+      // Calcular meses entre start y expiry de forma más precisa
+      const yearsDiff = expiryDate.getFullYear() - startDate.getFullYear();
+      const monthsDiff = (yearsDiff * 12) + (expiryDate.getMonth() - startDate.getMonth());
+      const daysDiff = expiryDate.getDate() - startDate.getDate();
+      
+      // Si hay días adicionales, contar como mes completo
+      const totalMonths = Math.max(1, monthsDiff + (daysDiff >= 0 ? 0 : 1));
+      
+      // Encontrar la membresía para obtener el precio
+      const selectedMembership = memberships.find(m => m.id === formData.membershipId);
+      
+      if (selectedMembership && totalMonths > 0) {
+        // Calcular monto pagado: precio × meses
+        calculatedData.lastPaymentAmount = selectedMembership.price * totalMonths;
+      } else if (selectedMembership) {
+        // Si no se puede calcular meses, usar 1 mes por defecto
+        calculatedData.lastPaymentAmount = selectedMembership.price;
+      } else {
+        calculatedData.lastPaymentAmount = 0;
+      }
+    } else if (!initialData) {
+      // Si es un nuevo miembro pero no hay datos suficientes, establecer a 0
+      calculatedData.lastPaymentAmount = 0;
+    }
+    
+    onSubmit(calculatedData);
   };
 
   return (

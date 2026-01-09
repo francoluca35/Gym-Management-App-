@@ -1,12 +1,13 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
 import { Badge } from "./ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
-import { Search, UserPlus, Edit, Calendar, Trash2, CreditCard } from "lucide-react";
-import { Member, Membership } from "../types";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import { Search, UserPlus, Edit, Calendar, Trash2, CreditCard, X } from "lucide-react";
+import { Member, Membership, PaymentStatus } from "../types";
 import { MemberForm } from "./MemberForm";
 import { formatDate, getDaysUntilExpiry, getPaymentStatus, formatCurrency } from "../utils/helpers";
 import { Label } from "./ui/label";
@@ -16,25 +17,58 @@ import { updateClientGym } from "../utils/clients";
 interface MembersManagementProps {
   members: Member[];
   memberships: Membership[];
+  initialFilter?: 'expiring-soon' | 'expired' | null | undefined;
   onAddMember: (member: Omit<Member, 'id'>) => void;
   onUpdateMember: (id: string, member: Partial<Member>) => void;
   onDeleteMember: (id: string) => void;
   onPayMembership: (id: string, months: number) => void;
 }
 
-export function MembersManagement({ members, memberships, onAddMember, onUpdateMember, onDeleteMember, onPayMembership }: MembersManagementProps) {
+export function MembersManagement({ members, memberships, initialFilter = null, onAddMember, onUpdateMember, onDeleteMember, onPayMembership }: MembersManagementProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<PaymentStatus | 'all'>(initialFilter || 'all');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
   const [payingMember, setPayingMember] = useState<Member | null>(null);
   const [paymentMonths, setPaymentMonths] = useState(1);
   const [registeringCardFor, setRegisteringCardFor] = useState<string | null>(null);
 
-  const filteredMembers = members.filter(member => 
-    member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    member.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    member.phone.includes(searchTerm)
-  );
+  // Aplicar filtro inicial cuando se recibe
+  useEffect(() => {
+    if (initialFilter === 'expiring-soon' || initialFilter === 'expired') {
+      setStatusFilter(initialFilter);
+    } else {
+      // Si no hay filtro inicial o es null, mantener 'all'
+      if (!initialFilter) {
+        setStatusFilter('all');
+      }
+    }
+  }, [initialFilter]);
+
+  // Filtrar miembros por búsqueda y estado
+  let filteredMembers = members.filter(member => {
+    // Filtro de búsqueda
+    const matchesSearch = 
+      member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      member.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      member.phone.includes(searchTerm);
+
+    if (!matchesSearch) return false;
+
+    // Filtro de estado
+    if (statusFilter === 'all') return true;
+    const status = getPaymentStatus(member.membershipExpiry);
+    return status === statusFilter;
+  });
+
+  // Ordenar por fecha de vencimiento si el filtro es 'expired' (más reciente primero)
+  if (statusFilter === 'expired') {
+    filteredMembers = filteredMembers.sort((a, b) => {
+      const dateA = new Date(a.membershipExpiry).getTime();
+      const dateB = new Date(b.membershipExpiry).getTime();
+      return dateB - dateA; // Orden descendente (más reciente primero)
+    });
+  }
 
   const handleAddMember = (memberData: Omit<Member, 'id'>) => {
     onAddMember(memberData);
@@ -230,14 +264,39 @@ export function MembersManagement({ members, memberships, onAddMember, onUpdateM
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-            <Input
-              placeholder="Buscar por nombre, email o teléfono..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+              <Input
+                placeholder="Buscar por nombre, email o teléfono..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Select value={statusFilter} onValueChange={(value: PaymentStatus | 'all') => setStatusFilter(value)}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Filtrar por estado" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="active">Activos</SelectItem>
+                  <SelectItem value="expiring-soon">Por Vencer</SelectItem>
+                  <SelectItem value="expired">Vencidas</SelectItem>
+                </SelectContent>
+              </Select>
+              {statusFilter !== 'all' && (
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setStatusFilter('all')}
+                  title="Limpiar filtro"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
           </div>
 
           <div className="rounded-md border overflow-x-auto">

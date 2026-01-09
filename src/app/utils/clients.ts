@@ -23,8 +23,10 @@ export async function addClientGym(gymId: string, memberData: Omit<Member, 'id'>
         membership_id: memberData.membershipId,
         payment_method: memberData.paymentMethod,
         last_payment_date: memberData.lastPaymentDate,
+        last_payment_amount: memberData.lastPaymentAmount || 0,
         registration_fee: memberData.registrationFee || 0,
         registration_fee_paid: memberData.registrationFeePaid || false,
+        registration_fee_payment_date: memberData.registrationFeePaid && memberData.registrationFeePaid ? new Date().toISOString().split('T')[0] : null,
         image_url: memberData.imageUrl || null,
         rfid_card_id: memberData.rfidCardId || null
       })
@@ -47,8 +49,10 @@ export async function addClientGym(gymId: string, memberData: Omit<Member, 'id'>
       membershipId: data.membership_id,
       paymentMethod: data.payment_method as PaymentMethod,
       lastPaymentDate: data.last_payment_date,
+      lastPaymentAmount: data.last_payment_amount || 0,
       registrationFee: data.registration_fee || 0,
       registrationFeePaid: data.registration_fee_paid || false,
+      registrationFeePaymentDate: data.registration_fee_payment_date || undefined,
       imageUrl: data.image_url || undefined,
       rfidCardId: data.rfid_card_id || undefined
     }
@@ -92,8 +96,10 @@ export async function getClientsGym(gymId: string): Promise<{ success: boolean; 
       membershipId: item.membership_id,
       paymentMethod: item.payment_method as PaymentMethod,
       lastPaymentDate: item.last_payment_date,
+      lastPaymentAmount: item.last_payment_amount || 0,
       registrationFee: item.registration_fee || 0,
       registrationFeePaid: item.registration_fee_paid || false,
+      registrationFeePaymentDate: item.registration_fee_payment_date || undefined,
       imageUrl: item.image_url || undefined,
       rfidCardId: item.rfid_card_id || undefined
     }))
@@ -118,8 +124,29 @@ export async function updateClientGym(clientId: string, memberData: Partial<Memb
     if (memberData.membershipId !== undefined) updateData.membership_id = memberData.membershipId
     if (memberData.paymentMethod !== undefined) updateData.payment_method = memberData.paymentMethod
     if (memberData.lastPaymentDate !== undefined) updateData.last_payment_date = memberData.lastPaymentDate
+    if (memberData.lastPaymentAmount !== undefined) updateData.last_payment_amount = memberData.lastPaymentAmount
     if (memberData.registrationFee !== undefined) updateData.registration_fee = memberData.registrationFee
-    if (memberData.registrationFeePaid !== undefined) updateData.registration_fee_paid = memberData.registrationFeePaid
+    
+    // Si se cambia registrationFeePaid de false a true, guardar la fecha de pago
+    if (memberData.registrationFeePaid !== undefined) {
+      updateData.registration_fee_paid = memberData.registrationFeePaid
+      // Si se marca como pagado y no tiene fecha de pago, establecerla
+      if (memberData.registrationFeePaid === true) {
+        // Obtener el registro actual para verificar si ya tiene fecha
+        const { data: currentData } = await supabase
+          .from('client_gym')
+          .select('registration_fee_payment_date')
+          .eq('id', clientId)
+          .single()
+        
+        // Solo establecer fecha si no existe
+        if (!currentData?.registration_fee_payment_date) {
+          updateData.registration_fee_payment_date = new Date().toISOString().split('T')[0]
+        }
+      }
+    }
+    
+    if (memberData.registrationFeePaymentDate !== undefined) updateData.registration_fee_payment_date = memberData.registrationFeePaymentDate
     if (memberData.imageUrl !== undefined) updateData.image_url = memberData.imageUrl
     if (memberData.rfidCardId !== undefined) updateData.rfid_card_id = memberData.rfidCardId
 
@@ -146,8 +173,10 @@ export async function updateClientGym(clientId: string, memberData: Partial<Memb
       membershipId: data.membership_id,
       paymentMethod: data.payment_method as PaymentMethod,
       lastPaymentDate: data.last_payment_date,
+      lastPaymentAmount: data.last_payment_amount || 0,
       registrationFee: data.registration_fee || 0,
       registrationFeePaid: data.registration_fee_paid || false,
+      registrationFeePaymentDate: data.registration_fee_payment_date || undefined,
       imageUrl: data.image_url || undefined,
       rfidCardId: data.rfid_card_id || undefined
     }
@@ -180,7 +209,8 @@ export async function deleteClientGym(clientId: string): Promise<{ success: bool
 }
 
 // Pagar cuota de membresía (actualizar fechas de pago y vencimiento)
-export async function payMembership(clientId: string, months: number = 1): Promise<{ success: boolean; error?: string; client?: Member }> {
+// amount: Monto total pagado (precio de membresía * meses)
+export async function payMembership(clientId: string, months: number = 1, amount: number = 0): Promise<{ success: boolean; error?: string; client?: Member }> {
   try {
     const today = new Date()
     const newExpiryDate = new Date(today)
@@ -194,6 +224,7 @@ export async function payMembership(clientId: string, months: number = 1): Promi
       .from('client_gym')
       .update({
         last_payment_date: todayStr,
+        last_payment_amount: amount, // Guardar el monto total pagado (precio * meses)
         membership_expiry: expiryStr
       })
       .eq('id', clientId)
@@ -216,8 +247,10 @@ export async function payMembership(clientId: string, months: number = 1): Promi
       membershipId: data.membership_id,
       paymentMethod: data.payment_method as PaymentMethod,
       lastPaymentDate: data.last_payment_date,
+      lastPaymentAmount: data.last_payment_amount || 0,
       registrationFee: data.registration_fee || 0,
       registrationFeePaid: data.registration_fee_paid || false,
+      registrationFeePaymentDate: data.registration_fee_payment_date || undefined,
       imageUrl: data.image_url || undefined,
       rfidCardId: data.rfid_card_id || undefined
     }

@@ -36,8 +36,10 @@ export interface Member {
   membershipId: string;
   paymentMethod: PaymentMethod;
   lastPaymentDate: string;
+  lastPaymentAmount?: number; // Monto total pagado en el último pago (precio * meses)
   registrationFee?: number;
   registrationFeePaid?: boolean;
+  registrationFeePaymentDate?: string; // Fecha en que se pagó la inscripción
   imageUrl?: string;
   rfidCardId?: string; // ID único de la tarjeta RFID/NFC
 }
