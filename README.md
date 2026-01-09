@@ -1,122 +1,247 @@
-# Gym Management App
+# 🏋️ GymManager Pro
 
-This is a code bundle for Gym Management App. The original project is available at https://www.figma.com/design/if9q1l6mwgb59LJQ04RaBx/Gym-Management-App.
+Sistema web completo para la **gestión integral de gimnasios**, diseñado para soportar **múltiples gimnasios**, control de acceso por roles, gestión de miembros, membresías, asistencias, finanzas y **control automático mediante RFID/NFC**.
 
-## Requisitos Previos
+---
 
-- Node.js (v18 o superior)
-- MongoDB (instalado y corriendo localmente o URI de MongoDB Atlas)
-- npm o yarn
+## 📌 Descripción general
 
-## Instalación
+**GymManager Pro** es una plataforma web moderna orientada a la administración operativa y administrativa de gimnasios.  
+Permite a cada gimnasio gestionar sus propios datos, empleados y clientes de forma aislada y segura, con un sistema de autenticación dual basado en **IP + usuarios**.
 
-### 1. Instalar todas las dependencias (frontend + backend)
+---
 
-```bash
-npm run install:all
-```
+## 🚀 Tecnologías utilizadas
 
-O manualmente:
+### Frontend
+- **React 18** + **TypeScript**
+- **Vite**
+- **Tailwind CSS**
+- **Shadcn UI** (Radix UI)
+- **Lucide React** (iconos)
 
-```bash
-# Instalar dependencias del frontend
-npm install
+### Backend / Base de datos
+- **Supabase**
+  - PostgreSQL
+  - Auth
+  - Storage (opcional)
 
-# Instalar dependencias del backend
-cd server
-npm install
-cd ..
-```
+### Hardware / APIs
+- **Web Serial API**
+  - Integración con lectores **RFID/NFC USB**
+  - Compatible con Chrome, Edge y Opera
 
-### 2. Configurar variables de entorno
+---
 
-Crea un archivo `.env` en la carpeta `server/`:
+## 🔐 Arquitectura de autenticación
 
-```env
-PORT=3001
-MONGODB_URI=mongodb://localhost:27017/gym-management
-NODE_ENV=development
-```
+### 1️⃣ Sistema de autenticación dual
 
-O para MongoDB Atlas:
+#### 🔹 Opción A — Verificación por IP (empleados)
+- Se valida la **IP pública** del gimnasio
+- Si coincide:
+  - Se muestra selección de turno
+    - Mañana
+    - Tarde
+    - Noche
+  - Login con credenciales de empleado
 
-```env
-PORT=3001
-MONGODB_URI=mongodb+srv://usuario:password@cluster.mongodb.net/gym-management?retryWrites=true&w=majority
-NODE_ENV=development
-```
+#### 🔹 Opción B — Login administrativo
+- Acceso desde cualquier lugar
+- Usuario y contraseña
+- Acceso completo sin selección de turno
 
-## Ejecución
+---
 
-### Opción 1: Ejecutar todo junto (recomendado)
+## 👥 Roles de usuario
 
-```bash
-npm run dev:all
-```
+### Administrador (`admin`)
+- Acceso completo
+- Tabs:
+  - Inicio (Dashboard)
+  - Miembros
+  - Membresías
+  - Asistencia
+  - Finanzas
 
-Esto ejecutará tanto el servidor backend (puerto 3001) como el frontend (puerto 5173) simultáneamente.
+### Empleado (`empleado`)
+- Acceso limitado
+- Tabs:
+  - Miembros
+  - Asistencia
 
-### Opción 2: Ejecutar por separado
+## 🗄️ Base de datos (Supabase / PostgreSQL)
 
-**Terminal 1 - Backend:**
-```bash
-npm run dev:server
-```
+### Tabla: `gimnasios`
+- Datos del gimnasio
+- IP registrada
+- Capacidad
+- Horarios
+- Tipos de clases
+- Planes
 
-**Terminal 2 - Frontend:**
-```bash
-npm run dev
-```
+### Tabla: `gyms`
+- Usuarios por gimnasio (JSONB)
+- Relación 1:1 con `gimnasios`
 
-## Configuración del Proxy
+### Tabla: `client_gym`
+- Miembros del gimnasio
+- Asociados a `gym_id`
+- Incluye:
+  - Datos personales
+  - Fechas de membresía
+  - Método de pago
+  - Ficha de inscripción
+  - `rfid_card_id` único
 
-El frontend está configurado para usar un proxy de Vite que redirige automáticamente todas las peticiones `/api/*` al backend en el puerto 3001. Esto significa que:
+### Tabla: `membresia_gym`
+- Planes de membresía
+- Asociados a `gym_id`
+- Precio, nombre y descripción
 
-- El frontend corre en: `http://localhost:5173`
-- El backend corre en: `http://localhost:3001`
-- Las peticiones del frontend a `/api/*` se redirigen automáticamente al backend
-- **Desde el punto de vista del frontend, todo funciona en un solo puerto (5173)**
+### Tabla: `asistencia_gym`
+- Registro de asistencias
+- Soporta múltiples entradas/salidas por día
+- Almacena arrays de sesiones
 
-## Funcionalidades
+---
 
-### Pre-Login
-- **Registro**: Permite registrar un nuevo gimnasio con:
-  - Nombre del gimnasio
-  - Nombre del dueño
-  - Dirección
-  - Teléfono
-  - Email
-  - Usuario y contraseña
-  
-  Al registrarse, se guarda automáticamente la IP de la máquina y se crean:
-  - Un usuario admin con las credenciales proporcionadas
-  - 3 usuarios empleados predeterminados: `empleadoM`, `empleadoT`, `empleadoN` (contraseña: `12345`)
+## ⚙️ Funcionalidades principales
 
-- **Login**: Permite iniciar sesión con usuario y contraseña
+### 👤 Gestión de miembros
+- Alta, edición y baja de miembros
+- Asignación de membresías
+- Registro de tarjetas RFID/NFC
+- Ficha de inscripción (pago único)
+- Renovación de cuotas (1 a 12 meses)
+- Estados:
+  - Activa
+  - Por vencer
+  - Vencida
+- Búsqueda en tiempo real
 
-### Flujo de la Aplicación
+---
 
-1. **Pre-Login**: Login o Registro del gimnasio
-2. **Selección de Turno**: Mañana, Tarde o Noche
-3. **Login de Empleado**: Usuario y contraseña del empleado
-4. **Dashboard**: Gestión completa del gimnasio
+### 💳 Gestión de membresías
+- Crear, editar y eliminar planes
+- Precio mensual
+- Descripción
+- Aislado por gimnasio
 
-## Estructura de Base de Datos
+---
 
-### Colección: gimnasios
-Almacena la información de cada gimnasio registrado.
+### 🕒 Control de asistencia
 
-### Colección: usuarios
-Almacena los usuarios (admin y empleados) asociados a cada gimnasio.
+#### Modo manual
+- Buscar miembro
+- Fichar entrada / salida
+- Ver sesiones activas
+- Ver registros diarios
 
-Para más detalles sobre la estructura, consulta `server/README.md`.
+#### Modo automático (RFID/NFC)
+- Conexión de lector USB
+- Lectura continua
+- Detección automática de entrada/salida
+- Asociación de tarjeta a miembro
 
-## Solución de Problemas
+---
 
-### Error: "ERR_CONNECTION_REFUSED"
-- Asegúrate de que el servidor backend esté corriendo en el puerto 3001
-- Verifica que MongoDB esté corriendo (si usas MongoDB local)
-- Ejecuta `npm run dev:all` para iniciar ambos servidores
+## 📊 Dashboard (solo administradores)
+- Total de miembros
+- Membresías activas, vencidas y por vencer
+- Ingresos potenciales
+- Asistencias del día
+- Gráficos:
+  - Distribución de membresías
+  - Asistencias últimos 7 días
 
-### Error: "Cannot find module"
-- Ejecuta `npm run install:all` para instalar todas las dependencias
+---
+
+## 💰 Panel financiero (solo administradores)
+- Resumen de ingresos
+- Análisis por tipo de membresía
+- Reportes de pagos
+
+---
+## 📡 Sistema RFID/NFC
+
+### Implementación
+Archivo:
+### Características
+- Conexión/desconexión del lector
+- Lectura simple y continua
+- Extracción automática del ID
+- Control de asistencia automático
+
+### Formatos soportados
+- Hexadecimal: `ABCD1234`
+- Decimal: `12345678`
+- Con separadores: `12:34:56:78`
+- Con prefijos/sufijos: `Card ID: 12345678`
+
+---
+
+## 🔄 Flujo completo de uso
+
+### Registro inicial
+1. Registro del gimnasio
+2. Guardado de IP pública
+3. Creación de:
+   - 1 administrador
+   - 3 empleados por turno
+4. Generación de `gym_id`
+
+### Acceso diario
+- Empleados:
+  - Verificación IP → Turno → Login
+- Administradores:
+  - Login directo
+
+---
+
+## 🧠 Características técnicas
+
+### Seguridad
+- Aislamiento total por `gym_id`
+- Validación de IP
+- Sesiones persistentes
+- Control de roles
+
+### Rendimiento
+- Índices en campos clave
+- Triggers `updated_at`
+- Consultas optimizadas
+- Carga eficiente de datos
+
+### UX/UI
+- Responsive
+- Shadcn UI
+- Validaciones de formularios
+- Estados visuales claros
+
+---
+
+---
+
+## ✅ Estado del proyecto
+
+🟢 **Completo y funcional**
+
+Incluye:
+- Autenticación dual
+- Gestión de miembros
+- Gestión de membresías
+- Control de asistencia manual y RFID
+- Dashboard administrativo
+- Panel financiero
+- Sistema RFID/NFC integrado
+
+---
+
+## 📄 Licencia
+Proyecto privado / uso interno (definir licencia si se publica).
+
+---
+
+Desarrollado por Deamon DD para la gestión profesional de gimnasios.
+
