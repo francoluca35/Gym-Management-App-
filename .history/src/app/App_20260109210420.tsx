@@ -591,7 +591,7 @@ function App() {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className={`grid w-full ${currentUser?.rol === 'admin' ? 'grid-cols-6' : 'grid-cols-2'} lg:w-auto lg:inline-grid`}>
+          <TabsList className={`grid w-full ${currentUser?.rol === 'admin' ? 'grid-cols-5' : 'grid-cols-2'} lg:w-auto lg:inline-grid`}>
             {currentUser?.rol === 'admin' && (
               <TabsTrigger value="home" className="gap-2">
                 <LayoutDashboard className="w-4 h-4" />
@@ -616,12 +616,6 @@ function App() {
               <TabsTrigger value="financial" className="gap-2">
                 <TrendingUp className="w-4 h-4" />
                 <span className="hidden sm:inline">Finanzas</span>
-              </TabsTrigger>
-            )}
-            {currentUser?.rol === 'admin' && (
-              <TabsTrigger value="configuration" className="gap-2">
-                <Settings className="w-4 h-4" />
-                <span className="hidden sm:inline">Configuración</span>
               </TabsTrigger>
             )}
           </TabsList>
@@ -690,12 +684,6 @@ function App() {
                   }
                 }}
               />
-            </TabsContent>
-          )}
-
-          {currentUser?.rol === 'admin' && (
-            <TabsContent value="configuration" className="space-y-6">
-              <Configuration gymId={gymId} />
             </TabsContent>
           )}
         </Tabs>
