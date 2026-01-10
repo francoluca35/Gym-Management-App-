@@ -156,8 +156,7 @@ CREATE TABLE IF NOT EXISTS gym_config (
 -- Índice para búsquedas rápidas
 CREATE INDEX IF NOT EXISTS idx_gym_config_gym_id ON gym_config(gym_id);
 
--- Trigger para actualizar updated_at (idempotente)
-DROP TRIGGER IF EXISTS update_gym_config_updated_at ON gym_config;
+-- Trigger para actualizar updated_at
 CREATE TRIGGER update_gym_config_updated_at BEFORE UPDATE ON gym_config
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
@@ -169,5 +168,4 @@ ALTER TABLE IF EXISTS gyms DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS client_gym DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS membresia_gym DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS asistencia_gym DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS gym_config DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS gym_config DISABLE ROW LEVEL SECURITY;

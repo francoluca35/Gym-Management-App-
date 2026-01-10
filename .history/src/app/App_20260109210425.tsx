@@ -692,12 +692,6 @@ function App() {
               />
             </TabsContent>
           )}
-
-          {currentUser?.rol === 'admin' && (
-            <TabsContent value="configuration" className="space-y-6">
-              <Configuration gymId={gymId} />
-            </TabsContent>
-          )}
         </Tabs>
       </main>
 

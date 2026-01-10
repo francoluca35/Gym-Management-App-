@@ -1,0 +1,78 @@
+═══════════════════════════════════════════════════════════════
+  RESUMEN DE CAMBIOS - SECCIÓN DE CONFIGURACIÓN
+═══════════════════════════════════════════════════════════════
+
+📋 CAMBIOS PRINCIPALES
+───────────────────────────────────────────────────────────────
+
+1. ✅ NUEVA SECCIÓN "CONFIGURACIÓN" (Solo Admin)
+   - Tab visible solo para administradores
+   - 4 pestañas de configuración
+
+2. ✅ GESTIÓN DE USUARIOS EMPLEADOS
+   - Lista de usuarios empleados (empleadoM, empleadoT, empleadoN)
+   - Editar nombre de usuario
+   - Editar contraseña (con mostrar/ocultar)
+   - Validación de campos requeridos
+
+3. ✅ CONFIGURACIÓN DE MERCADO PAGO
+   - Switch para habilitar/deshabilitar
+   - Campo: Public Key (clave pública)
+   - Campo: Access Token (token privado, con mostrar/ocultar)
+   - Alerta informativa sobre credenciales
+
+4. ✅ CONFIGURACIÓN DE NOTIFICACIONES
+   - Switch para habilitar/deshabilitar notificaciones
+   - Campo: Email para notificaciones
+   - Switch: Renovación automática de membresías
+   - Campo: Días de anticipación para recordatorios (1-30)
+
+5. ✅ INFORMACIÓN DEL GIMNASIO
+   - Editar: Nombre, Propietario, Dirección, Teléfono, Email
+   - Editar: Instagram, Descripción
+   - Mostrar: IP de Registro (solo lectura)
+
+📦 BASE DE DATOS
+───────────────────────────────────────────────────────────────
+- Nueva tabla: gym_config
+  • mercado_pago_public_key
+  • mercado_pago_access_token
+  • mercado_pago_enabled
+  • notification_email
+  • notification_enabled
+  • auto_renewal_enabled
+  • membership_reminder_days
+
+📁 ARCHIVOS NUEVOS
+───────────────────────────────────────────────────────────────
+1. src/app/components/Configuration.tsx
+2. src/app/utils/config.ts
+3. supabase/migration_add_config.sql
+4. supabase/fix_config_trigger.sql
+
+📝 ARCHIVOS MODIFICADOS
+───────────────────────────────────────────────────────────────
+1. src/app/App.tsx
+   - Agregado tab "Configuración"
+   - Import de Configuration
+   - TabsContent para configuración
+
+2. supabase/schema.sql
+   - Agregada tabla gym_config
+   - Trigger idempotente
+
+🔧 FUNCIONES DE UTILIDAD (config.ts)
+───────────────────────────────────────────────────────────────
+- getGymConfig()
+- updateGymConfig()
+- getGymUsers()
+- updateEmployeeUser()
+- getGymInfo()
+- updateGymInfo()
+
+⚠️ IMPORTANTE
+───────────────────────────────────────────────────────────────
+Ejecutar en Supabase SQL Editor:
+- supabase/migration_add_config.sql (o fix_config_trigger.sql si hay error)
+
+═══════════════════════════════════════════════════════════════
