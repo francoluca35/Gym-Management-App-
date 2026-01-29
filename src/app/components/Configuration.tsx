@@ -19,7 +19,10 @@ import {
   Save,
   Edit,
   AlertCircle,
-  CheckCircle
+  CheckCircle,
+  Database,
+  Wifi,
+  WifiOff
 } from "lucide-react";
 import { getGymConfig, updateGymConfig, getGymUsers, updateEmployeeUser, getGymInfo, updateGymInfo, GymConfig, GymUser } from "../utils/config";
 import { supabase } from "../../lib/supabase";
@@ -61,11 +64,35 @@ export function Configuration({ gymId }: ConfigurationProps) {
   const [gymInstagram, setGymInstagram] = useState('');
   const [gymIP, setGymIP] = useState('');
 
+  // Estados para estado de conexión a base de datos
+  const [dbConnected, setDbConnected] = useState<boolean>(false);
+  const [isCheckingConnection, setIsCheckingConnection] = useState(true);
+
   // Cargar datos iniciales
   useEffect(() => {
     if (currentGymId) {
       loadData();
     }
+    
+    // Verificar conexión a la base de datos
+    const checkConnection = async () => {
+      try {
+        setIsCheckingConnection(true);
+        const { data, error } = await supabase
+          .from('gimnasios')
+          .select('gym_id')
+          .limit(1);
+        
+        setDbConnected(!error && data !== null);
+      } catch (error) {
+        console.error('Error verificando conexión:', error);
+        setDbConnected(false);
+      } finally {
+        setIsCheckingConnection(false);
+      }
+    };
+
+    checkConnection();
   }, [currentGymId]);
 
   const loadData = async () => {
@@ -259,6 +286,34 @@ export function Configuration({ gymId }: ConfigurationProps) {
         <Settings className="w-6 h-6" />
         <h2 className="text-2xl font-bold">Configuración</h2>
       </div>
+
+      {/* Estado de conexión a base de datos */}
+      <Card className={`border-2 ${dbConnected ? 'border-green-500/50 bg-green-500/10' : 'border-red-500/50 bg-red-500/10'}`}>
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Database className={`w-5 h-5 ${dbConnected ? 'text-green-600' : 'text-red-600'}`} />
+              <div>
+                <p className="font-medium">
+                  {dbConnected ? 'Base de datos conectada' : 'Base de datos desconectada'}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {isCheckingConnection 
+                    ? 'Verificando conexión...' 
+                    : dbConnected 
+                    ? 'Todos los datos se están sincronizando correctamente'
+                    : 'Error al conectar con la base de datos'}
+                </p>
+              </div>
+            </div>
+            {dbConnected ? (
+              <Wifi className="w-5 h-5 text-green-600" />
+            ) : (
+              <WifiOff className="w-5 h-5 text-red-600" />
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       <Tabs defaultValue="users" className="space-y-6">
         <TabsList className="grid w-full grid-cols-4">

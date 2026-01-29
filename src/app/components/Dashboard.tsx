@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { Users, DollarSign, TrendingUp, Activity, AlertCircle, CheckCircle, Clock, Wifi, WifiOff, ArrowRight, Database } from "lucide-react";
+import { Users, DollarSign, TrendingUp, Activity, AlertCircle, CheckCircle, Clock, Wifi, WifiOff, ArrowRight } from "lucide-react";
 import { Member, AttendanceRecord, Membership, AttendanceGym } from "../types";
 import { getPaymentStatus, formatCurrency } from "../utils/helpers";
 import { supabase } from "../../lib/supabase";
@@ -17,30 +17,6 @@ interface DashboardProps {
 }
 
 export function Dashboard({ members, attendanceRecords, attendancesGym, memberships, onNavigateToMembers }: DashboardProps) {
-  const [dbConnected, setDbConnected] = useState<boolean>(false);
-  const [isCheckingConnection, setIsCheckingConnection] = useState(true);
-
-  // Verificar conexión a la base de datos
-  useEffect(() => {
-    const checkConnection = async () => {
-      try {
-        setIsCheckingConnection(true);
-        const { data, error } = await supabase
-          .from('gimnasios')
-          .select('gym_id')
-          .limit(1);
-        
-        setDbConnected(!error && data !== null);
-      } catch (error) {
-        console.error('Error verificando conexión:', error);
-        setDbConnected(false);
-      } finally {
-        setIsCheckingConnection(false);
-      }
-    };
-
-    checkConnection();
-  }, []);
 
   // Estadísticas de miembros
   const totalMembers = members.length;
@@ -214,34 +190,6 @@ export function Dashboard({ members, attendanceRecords, attendancesGym, membersh
 
   return (
     <div className="space-y-6">
-      {/* Estado de conexión a base de datos */}
-      <Card className={`border-2 ${dbConnected ? 'border-green-500/50 bg-green-500/10' : 'border-red-500/50 bg-red-500/10'}`}>
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Database className={`w-5 h-5 ${dbConnected ? 'text-green-600' : 'text-red-600'}`} />
-              <div>
-                <p className="font-medium">
-                  {dbConnected ? 'Base de datos conectada' : 'Base de datos desconectada'}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {isCheckingConnection 
-                    ? 'Verificando conexión...' 
-                    : dbConnected 
-                    ? 'Todos los datos se están sincronizando correctamente'
-                    : 'Error al conectar con la base de datos'}
-                </p>
-              </div>
-            </div>
-            {dbConnected ? (
-              <Wifi className="w-5 h-5 text-green-600" />
-            ) : (
-              <WifiOff className="w-5 h-5 text-red-600" />
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
       {/* KPIs principales */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
